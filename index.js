@@ -181,13 +181,14 @@ async function run() {
     app.get("/payments", verifyFBToken, async (req, res) => {
       const email = req.query.email;
       const query = {};
+      const sort = { paidAt: -1 };
       if (email) {
         query.customerEmail = email;
         if (email !== req.decoded_email) {
           return res.status(403).send({ message: "Forbidden access" });
         }
       }
-      const result = await paymentColl.find(query).toArray();
+      const result = await paymentColl.find(query).sort(sort).toArray();
       res.send(result);
     });
 
@@ -211,6 +212,4 @@ app.listen(port, () => {
   console.log(`Zap shift is listening on port ${port}`);
 });
 
-
 // errors are very annoying!
-
