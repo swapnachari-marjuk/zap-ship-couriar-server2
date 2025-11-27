@@ -68,6 +68,10 @@ async function run() {
       const userDoc = req.body;
       userDoc.role = "user";
       userDoc.createdAt = new Date();
+      const existingUser = await usersColl.findOne({ email: userDoc.email });
+      if (existingUser) {
+        return res.send({ message: "existing user logging in." });
+      }
       const result = await usersColl.insertOne(userDoc);
       res.send(result);
     });
