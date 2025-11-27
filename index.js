@@ -60,8 +60,17 @@ async function run() {
     await client.connect();
 
     const db = client.db("zap_shift_db");
+    const usersColl = db.collection("users");
     const parcelsColl = db.collection("parcels");
     const paymentColl = db.collection("payment");
+
+    app.post("/users", async (req, res) => {
+      const userDoc = req.body;
+      userDoc.role = "user";
+      userDoc.createdAt = new Date();
+      const result = await usersColl.insertOne(userDoc);
+      res.send(result);
+    });
 
     // parcels related apis
     app.post("/parcels", verifyFBToken, async (req, res) => {
