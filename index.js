@@ -61,9 +61,11 @@ async function run() {
 
     const db = client.db("zap_shift_db");
     const usersColl = db.collection("users");
+    const ridersColl = db.collection("riders");
     const parcelsColl = db.collection("parcels");
     const paymentColl = db.collection("payment");
 
+    // users related apis
     app.post("/users", async (req, res) => {
       const userDoc = req.body;
       userDoc.role = "user";
@@ -73,6 +75,15 @@ async function run() {
         return res.send({ message: "existing user logging in." });
       }
       const result = await usersColl.insertOne(userDoc);
+      res.send(result);
+    });
+
+    // ridersColl
+    app.post("/riders", async (req, res) => {
+      const rider = req.body;
+      rider.status = "pending";
+      rider.createdAt = new Date();
+      const result = await ridersColl.insertOne(rider);
       res.send(result);
     });
 
