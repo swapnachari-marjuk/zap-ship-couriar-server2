@@ -87,6 +87,29 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/riders", async (req, res) => {
+      const rider = req.body;
+      const query = {};
+      if (req.query.status) {
+        query.status = req.query.status;
+        console.log(query);
+      }
+      const result = await ridersColl.find(query).toArray();
+      res.send(result);
+    });
+
+    app.patch("/riders/:id", async (req, res) => {
+      const { id } = req.params;
+      const { status } = req.body;
+      const query = { _id: new ObjectId(id) };
+      const doc = {
+        $set: { status: status },
+      };
+
+      const result = await ridersColl.updateOne(query, doc);
+      res.send(result);
+    });
+
     // parcels related apis
     app.post("/parcels", verifyFBToken, async (req, res) => {
       const parcelsDoc = req.body;
