@@ -100,11 +100,18 @@ async function run() {
 
     app.patch("/riders/:id", async (req, res) => {
       const { id } = req.params;
-      const { status } = req.body;
+      const { status, email } = req.body;
       const query = { _id: new ObjectId(id) };
       const doc = {
         $set: { status: status },
       };
+
+
+      if (status === "approved") {
+        const update = { $set: { role: "rider" } };
+        const userQuery = { email };
+        const userApprove = await usersColl.updateOne(userQuery, update);
+      }
 
       const result = await ridersColl.updateOne(query, doc);
       res.send(result);
