@@ -78,6 +78,12 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/users", async (req, res) => {
+      const user = req.body;
+      const result = await usersColl.find().toArray();
+      res.send(result);
+    });
+
     // ridersColl
     app.post("/riders", async (req, res) => {
       const rider = req.body;
@@ -105,7 +111,6 @@ async function run() {
       const doc = {
         $set: { status: status },
       };
-
 
       if (status === "approved") {
         const update = { $set: { role: "rider" } };
