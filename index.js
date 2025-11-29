@@ -84,6 +84,29 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/users/:id", async (req, res) => {
+      const { id } = req.params;
+      const { approvalStatus } = req.body;
+      console.log(approvalStatus);
+      if (approvalStatus === "approved") {
+        const update = { $set: { role: "admin" } };
+        const result = await usersColl.updateOne(
+          { _id: new ObjectId(id) },
+          update
+        );
+        res.send({ result, approvalStatus: "approved" });
+      }
+
+      if (approvalStatus === "removed") {
+        const update = { $set: { role: "user" } };
+        const result = await usersColl.updateOne(
+          { _id: new ObjectId(id) },
+          update
+        );
+        res.send({ result, approvalStatus: "removed" });
+      }
+    });
+
     // ridersColl
     app.post("/riders", async (req, res) => {
       const rider = req.body;
