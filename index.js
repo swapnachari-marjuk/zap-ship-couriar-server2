@@ -107,6 +107,12 @@ async function run() {
       }
     });
 
+    app.get("/users/:email/role", async (req, res) => {
+      const { email } = req.params;
+      const user = await usersColl.findOne({ email });
+      res.send({ role: user.role || "user" });
+    });
+
     // ridersColl
     app.post("/riders", async (req, res) => {
       const rider = req.body;
