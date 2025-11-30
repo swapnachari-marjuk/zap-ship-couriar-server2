@@ -37,7 +37,6 @@ const verifyFBToken = async (req, res, next) => {
     const tokenId = bearer.split(" ")[1];
     const decoded = await admin.auth().verifyIdToken(tokenId);
     req.decoded_email = decoded.email;
-    console.log(decoded, "from middleware");
     next();
   } catch (error) {
     console.log(error);
@@ -65,6 +64,16 @@ async function run() {
     const parcelsColl = db.collection("parcels");
     const paymentColl = db.collection("payment");
 
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded_email;
+      const query = { email };
+      const user = await usersColl.findOne(query);
+      if (user?.role !== "admin") {
+        return res.status(403).send({ message: "Forbidden access." });
+      }
+      next();
+    };
+
     // users related apis
     app.post("/users", async (req, res) => {
       const userDoc = req.body;
@@ -78,43 +87,61 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/users", async (req, res) => {
-      const user = req.body;
-      const result = await usersColl.find().toArray();
-      res.send(result);
+    // users getting api
+    app.get("/users", verifyFBToken, verifyAdmin, async (req, res) => {
+      const { limit, skip, searchText } = req.query;
+      const query = {};
+      if (searchText) {
+        query.displayName = { $regex: searchText, $options: "i" };
+      }
+      console.log(limit, skip, searchText);
+      const result = await usersColl
+        .find(query)
+        .limit(parseInt(limit))
+        .skip(parseInt(skip))
+        .toArray();
+      const documentCount = await usersColl.countDocuments();
+      console.log(documentCount);
+      res.send({ result, documentCount });
     });
 
-    app.patch("/users/:id", async (req, res) => {
-      const { id } = req.params;
-      const { approvalStatus } = req.body;
-      console.log(approvalStatus);
-      if (approvalStatus === "approved") {
-        const update = { $set: { role: "admin" } };
-        const result = await usersColl.updateOne(
-          { _id: new ObjectId(id) },
-          update
-        );
-        res.send({ result, approvalStatus: "approved" });
-      }
+    // admin approval api
+    app.patch(
+      "/users/:id/role",
+      verifyFBToken,
+      verifyAdmin,
+      async (req, res) => {
+        const { id } = req.params;
+        const { approvalStatus } = req.body;
+        console.log(approvalStatus);
+        if (approvalStatus === "approved") {
+          const update = { $set: { role: "admin" } };
+          const result = await usersColl.updateOne(
+            { _id: new ObjectId(id) },
+            update
+          );
+          res.send({ result, approvalStatus: "approved" });
+        }
 
-      if (approvalStatus === "removed") {
-        const update = { $set: { role: "user" } };
-        const result = await usersColl.updateOne(
-          { _id: new ObjectId(id) },
-          update
-        );
-        res.send({ result, approvalStatus: "removed" });
+        if (approvalStatus === "removed") {
+          const update = { $set: { role: "user" } };
+          const result = await usersColl.updateOne(
+            { _id: new ObjectId(id) },
+            update
+          );
+          res.send({ result, approvalStatus: "removed" });
+        }
       }
-    });
+    );
 
-    app.get("/users/:email/role", async (req, res) => {
+    app.get("/users/:email/role", verifyFBToken, async (req, res) => {
       const { email } = req.params;
       const user = await usersColl.findOne({ email });
       res.send({ role: user.role || "user" });
     });
 
     // ridersColl
-    app.post("/riders", async (req, res) => {
+    app.post("/riders", verifyFBToken, async (req, res) => {
       const rider = req.body;
       rider.status = "pending";
       rider.createdAt = new Date();
@@ -122,7 +149,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/riders", async (req, res) => {
+    app.get("/riders", verifyFBToken, verifyAdmin, async (req, res) => {
       const rider = req.body;
       const query = {};
       if (req.query.status) {
@@ -133,7 +160,7 @@ async function run() {
       res.send(result);
     });
 
-    app.patch("/riders/:id", async (req, res) => {
+    app.patch("/riders/:id", verifyFBToken, verifyAdmin, async (req, res) => {
       const { id } = req.params;
       const { status, email } = req.body;
       const query = { _id: new ObjectId(id) };
@@ -293,7 +320,7 @@ async function run() {
 run().catch(console.dir);
 
 app.get("/", (req, res) => {
-  res.send("Zap Shift is Shifting...😉");
+  res.send("Zap Shaft is Shifting...😉");
 });
 
 app.listen(port, () => {
