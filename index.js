@@ -263,7 +263,13 @@ async function run() {
       if (sessionRetrieve.payment_status === "paid") {
         const id = sessionRetrieve.metadata.parcelId;
         const query = { _id: new ObjectId(id) };
-        const update = { $set: { paymentStatus: "paid", trackingID } };
+        const update = {
+          $set: {
+            paymentStatus: "paid",
+            deliveryStatus: "pending-pickup",
+            trackingID,
+          },
+        };
         const result = await parcelsColl.updateOne(query, update);
 
         const paymentHistory = {
@@ -280,7 +286,6 @@ async function run() {
 
         const resultPayment = await paymentColl.insertOne(paymentHistory);
 
-        console.log("full operation is complete");
         return res.send({
           success: true,
           trackingID,
