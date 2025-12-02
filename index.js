@@ -150,11 +150,17 @@ async function run() {
     });
 
     app.get("/riders", verifyFBToken, verifyAdmin, async (req, res) => {
-      const rider = req.body;
+      const { status, workStatus, district: senderDistrict } = req.query;
+      console.log(req.query);
       const query = {};
-      if (req.query.status) {
-        query.status = req.query.status;
-        console.log(query);
+      if (status) {
+        query.status = status;
+      }
+      if (workStatus) {
+        query.workStatus = workStatus;
+      }
+      if (senderDistrict) {
+        query.riderDistrict = senderDistrict;
       }
       const result = await ridersColl.find(query).toArray();
       res.send(result);
@@ -165,7 +171,7 @@ async function run() {
       const { status, email } = req.body;
       const query = { _id: new ObjectId(id) };
       const doc = {
-        $set: { status: status },
+        $set: { status: status, workStatus: "Available" },
       };
 
       if (status === "approved") {
@@ -186,13 +192,45 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/parcels", verifyFBToken, verifyAdmin, async (req, res) => {
+      const { riderId, riderName, riderEmail, parcelId } = req.body;
+      const query = { _id: new ObjectId(parcelId) };
+      const updateDoc = {
+        $set: {
+          deliveryStatus: "Assigned Rider",
+          riderId,
+          riderName,
+          riderEmail,
+        },
+      };
+
+      const result = await parcelsColl.updateOne(query, updateDoc);
+
+      const riderQuery = { _id: new ObjectId(riderId) };
+      const riderUpdateDoc = {
+        $set: {
+          workStatus: "In Delivery",
+        },
+      };
+      const riderResult = await ridersColl.updateOne(
+        riderQuery,
+        riderUpdateDoc
+      );
+
+      res.send(riderResult);
+    });
+
     app.get("/parcels", verifyFBToken, async (req, res) => {
       const parcels = req.body;
-      const email = req.query.email;
+      const { email, deliveryStatus } = req.query;
       const query = {};
       if (email) {
         query.senderEmail = email;
       }
+      if (deliveryStatus) {
+        query.deliveryStatus = deliveryStatus;
+      }
+
       const options = { requestedAt: -1 };
       const result = await parcelsColl.find(query).sort(options).toArray();
       res.send(result);
