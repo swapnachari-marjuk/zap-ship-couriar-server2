@@ -94,14 +94,14 @@ async function run() {
       if (searchText) {
         query.displayName = { $regex: searchText, $options: "i" };
       }
-      console.log(limit, skip, searchText);
+      // console.log(limit, skip, searchText);
       const result = await usersColl
         .find(query)
         .limit(parseInt(limit))
         .skip(parseInt(skip))
         .toArray();
       const documentCount = await usersColl.countDocuments();
-      console.log(documentCount);
+      // console.log(documentCount);
       res.send({ result, documentCount });
     });
 
@@ -113,7 +113,7 @@ async function run() {
       async (req, res) => {
         const { id } = req.params;
         const { approvalStatus } = req.body;
-        console.log(approvalStatus);
+        // console.log(approvalStatus);
         if (approvalStatus === "approved") {
           const update = { $set: { role: "admin" } };
           const result = await usersColl.updateOne(
@@ -151,7 +151,7 @@ async function run() {
 
     app.get("/riders", verifyFBToken, verifyAdmin, async (req, res) => {
       const { status, workStatus, district: senderDistrict } = req.query;
-      console.log(req.query);
+      // console.log(req.query);
       const query = {};
       if (status) {
         query.status = status;
@@ -162,7 +162,12 @@ async function run() {
       if (senderDistrict) {
         query.riderDistrict = senderDistrict;
       }
-      const result = await ridersColl.find(query).toArray();
+      const result = await ridersColl
+        .find(query)
+        .sort({
+          createdAt: -1,
+        })
+        .toArray();
       res.send(result);
     });
 
@@ -197,7 +202,7 @@ async function run() {
       const query = { _id: new ObjectId(parcelId) };
       const updateDoc = {
         $set: {
-          deliveryStatus: "Assigned Rider",
+          deliveryStatus: "Assigned_Rider",
           riderId,
           riderName,
           riderEmail,
@@ -236,10 +241,39 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/parcels/rider", async (req, res) => {
+      const { riderEmail, deliveryStatus } = req.query;
+      const query = {};
+      if (riderEmail) {
+        query.riderEmail = riderEmail;
+      }
+
+      if (deliveryStatus) {
+        // query.deliveryStatus = { $in: ["Assigned_Rider", "rider_arriving"] };
+        query.deliveryStatus = { $nin: ["delivered"] };
+      }
+
+      const result = await parcelsColl.find(query).toArray();
+      res.send(result);
+    });
+
     app.get("/parcels/:id", verifyFBToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await parcelsColl.findOne(query);
+      res.send(result);
+    });
+
+    app.patch("/parcel/:id/status", async (req, res) => {
+      const { deliveryStatus } = req.body;
+      const query = { _id: new ObjectId(req.params.id) };
+      const update = {
+        $set: {
+          deliveryStatus,
+        },
+      };
+      const result = await parcelsColl.updateOne(query, update);
+      console.log(result);
       res.send(result);
     });
 
