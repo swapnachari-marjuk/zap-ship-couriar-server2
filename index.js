@@ -75,6 +75,16 @@ async function run() {
       next();
     };
 
+    const verifyRider = async (req, res, next) => {
+      const email = req.decoded_email;
+      const query = { email };
+      const user = await usersColl.findOne(query);
+      if (user?.role !== "rider") {
+        return res.status(403).send({ message: "Forbidden access." });
+      }
+      next();
+    };
+
     const logTracking = async (trackingID, status) => {
       const trackingLog = {
         trackingID,
@@ -309,6 +319,15 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await parcelsColl.deleteOne(query);
       res.send(result);
+    });
+
+    app.get("/parcels/byPipeline/forAdmin", async (req, res) => {
+      const pipeline = [{
+        $group: { _id: "$deliveryStatus", totalParcels: { $sum: 1 } },
+      }];
+
+      const result = await parcelsColl.aggregate(pipeline).toArray();
+      res.send(result)
     });
 
     // payment apis
